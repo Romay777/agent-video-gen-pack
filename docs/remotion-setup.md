@@ -11,7 +11,7 @@ Remotion renders React components to video. You write a composition (a React com
 
 ## Create a project
 
-This repo already has files, so scaffold into a subfolder (the `remotion-create` skill says the same):
+This repo already has files, so scaffold into a subfolder (the skill's `remotion-create` part says the same):
 
 ```bash
 npx create-video@latest --yes --blank --no-tailwind my-video
@@ -29,29 +29,27 @@ npx remotion render <CompositionId> out/video.mp4
 npx remotion still <CompositionId> out/frame.png --frame=30
 ```
 
-Preview first; render only when the person asks (see `remotion-studio` and `remotion-render` skills).
+Preview first; render only when the person asks (`remotion-studio/` and `remotion-render/` in the `remotion-best-practices` skill).
 
-## Packages used by this pipeline
+## Packages the examples use
 
 ```bash
 npx remotion add @remotion/media       # <Audio>, <Video>
-npx remotion add @remotion/captions    # Caption type, used by the Basic Captions element
+npx remotion add @remotion/captions    # Caption type, used by the Basic Captions element (only for subtitles)
 ```
 
 `npx remotion add` installs the version that matches the project's Remotion version.
 
 ## Agent skills
 
-Skills in this repo were installed with:
+One third-party skill is installed: `remotion-best-practices` from `remotion-dev/skills`. It is the self-contained bundle: its subfolders (`remotion-markup/`, `remotion-captions/`, `remotion-create/`, …) carry every other Remotion skill, so those are not installed separately.
 
 ```bash
-npx --yes skills@1.7.0 add remotion-dev/skills --yes
+npx --yes skills@1.7.0 add remotion-dev/skills --skill remotion-best-practices --yes   # install or update
 ```
 
-That is what `npx remotion skills add` runs under the hood. Files land in `.agents/skills/<name>/` and `.claude/skills/<name>` are symlinks to them. `skills-lock.json` records the source and hashes.
+Files land in `.agents/skills/remotion-best-practices/`, `.claude/skills/remotion-best-practices` is a symlink to it, and `skills-lock.json` records the source and hash. Without `--skill` the command installs all twelve Remotion skills, which duplicates the bundle's content.
 
-- Update: `npx remotion skills update` (from a Remotion project) or re-run the command above.
-- Added or changed skills are picked up by agents on the next session.
+- Leave the skill's files unedited, since an update overwrites them. This repo's differences from it live in `AGENTS.md` → "Overrides of the Remotion skill".
 - Review a skill before updating; skills run with the agent's permissions.
-
-If you scaffold a Remotion project in a subfolder and want the skills available inside it too, nothing to do: agents started at the repo root see `.agents/skills` here. Agents started inside the subfolder should be pointed at the repo root's `AGENTS.md`.
+- Agents started at the repo root see `.agents/skills`. Agents started inside a Remotion subfolder should be pointed at the repo root's `AGENTS.md`.

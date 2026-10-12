@@ -1,6 +1,6 @@
 ---
 name: speech-timestamps
-description: Get per-word and per-token timings from an audio file locally (NVIDIA Parakeet TDT 0.6B v3) to sync subtitles and animation with a voice-over in Remotion. Use after generating speech, or for any audio that needs subtitles or word-level timing.
+description: Get per-word and per-token timings from an audio or video file locally (NVIDIA Parakeet TDT 0.6B v3) to sync subtitles and animation with a voice-over in Remotion. Use after generating speech, after cutting a clip, or for any audio that needs subtitles or word-level timing.
 ---
 
 # Word and token timings
@@ -18,14 +18,14 @@ First run downloads ~2.4 GB into `.cache/models/` (or run `uv run scripts/downlo
 ## How to use it in Remotion
 
 - Scene length: `Math.ceil((duration + padSeconds) * fps)`.
-- Subtitles: give `captions` to `<BasicCaptions>` (see skill `remotion-captions`). Times are relative to the audio file, so keep audio and captions in the same `<Series.Sequence>`.
+- Subtitles: give `captions` to `<BasicCaptions>` (see `remotion-captions/display-captions.md` in skill `remotion-best-practices`). Times are relative to the audio file, so keep audio and captions in the same `<Series.Sequence>`.
 - Animations: frame = `Math.round(word.start * fps)`.
-- Working example: `docs/examples/Narrated.tsx`.
+- Working examples: `docs/examples/Narrated.tsx` (voice-over), `docs/examples/Clips.tsx` (existing footage).
 
 ## Know the limits
 
 - Only token **starts** are measured (0.08 s grid); `end` is derived and capped at 0.4 s.
-- The text is a transcription, not your script. Check low `confidence` words (< 0.7) and mismatches against the script, then re-take that scene.
+- The text is a transcription, not your script. Check low `confidence` words (< 0.7) and mismatches against what was meant; for a generated voice-over, rephrase and re-take that line.
 - Audio > 20 s is chunked with VAD on pauses; prefer short per-scene files.
 - 25 European languages, auto-detected. English and Russian included.
 

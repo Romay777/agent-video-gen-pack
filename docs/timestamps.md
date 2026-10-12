@@ -7,7 +7,7 @@
 ```bash
 uv run scripts/download_model.py                       # optional pre-download (~2.4 GB + 2 MB VAD) into .cache/models/
 uv run scripts/transcribe.py my-video/public/voiceover/scene-01.mp3
-uv run scripts/transcribe.py in.mp3 -o out/in.json --vad always
+uv run scripts/transcribe.py in.mp3 -o work/in.json --vad always
 uv run scripts/transcribe.py in.mp3 --quantization int8   # smaller/faster; run download_model.py --quantization int8 first
 ```
 

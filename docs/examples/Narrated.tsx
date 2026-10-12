@@ -25,13 +25,20 @@ export const calculateMetadata: CalculateMetadataFunction<NarratedProps> = ({
 });
 
 export const Narrated: React.FC<NarratedProps> = ({ scenes }) => {
-  const { width } = useVideoConfig();
+  const { fps, width } = useVideoConfig();
   return (
     <AbsoluteFill style={{ backgroundColor: "#0b1020" }}>
       <Series>
+        {/* Scenes are mapped from the timings JSON so a re-take resizes its scene by itself.
+            Write a sequence out by hand when a scene needs its own visuals or Studio editing. */}
         {scenes.map((scene) => (
-          <Series.Sequence key={scene.id} durationInFrames={sceneFrames(scene)}>
-            <Audio src={staticFile(scene.audio)} />
+          <Series.Sequence
+            key={scene.id}
+            name={scene.id}
+            durationInFrames={sceneFrames(scene)}
+            premountFor={fps}
+          >
+            <Audio src={staticFile(scene.audio)} premountFor={fps} />
             {/* ...visuals for this scene go here... */}
             <BasicCaptions
               captions={scene.captions}
