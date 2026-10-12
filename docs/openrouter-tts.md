@@ -19,13 +19,15 @@ Model page: https://openrouter.ai/google/gemini-3.8-flash-tts · API keys: https
 
 ```bash
 uv run scripts/tts.py --text "Hello! This is a test." -o out/hello.mp3
-uv run scripts/tts.py --file work/demo/scene-01.txt --voice Puck -o my-video/public/voiceover/scene-01.mp3
+uv run scripts/tts.py --file work/demo/scene-01.txt --voice Puck -o videos/my-video/public/voiceover/scene-01.mp3
 cat script.txt | uv run scripts/tts.py -o out/voice.mp3
-uv run scripts/tts.py --model google/gemini-3.8-flash-tts --voice Kore --format mp3 --text "..." -o out/x.mp3
+uv run scripts/tts.py --model google/gemini-3.8-flash-tts --voice Kore --text "..." -o out/x.wav   # format follows the extension
 uv run scripts/tts.py --file scene.txt -o out/x.mp3 -i "Cheerful, fast, like an ad announcer."   # voice style
 ```
 
-It prints the file size, the OpenRouter generation id and, for mp3, the duration (via `ffprobe`). Exit code is non-zero on API errors with a hint for the HTTP status.
+Gemini TTS models on OpenRouter return raw PCM (16-bit mono, 24 kHz) whatever `response_format` asks for. The script therefore requests PCM and encodes it with ffmpeg into the format of the output file's extension (`.mp3`, `.wav`, …); an output ending in `.pcm` keeps the raw bytes.
+
+It prints the file size, the OpenRouter generation id and the duration. Exit code is non-zero on API errors with a hint for the HTTP status.
 
 ## The same thing in your own code
 
@@ -42,17 +44,18 @@ with client.audio.speech.with_streaming_response.create(
     model="google/gemini-3.8-flash-tts",
     voice="Zephyr",
     input="Hello! This is a text-to-speech test.",
-    response_format="mp3",          # "mp3" | "pcm"
+    response_format="pcm",
 ) as response:
-    response.stream_to_file("hello.mp3")   # body is raw audio bytes, not JSON
+    response.stream_to_file("hello.pcm")   # body is raw audio bytes (16-bit mono PCM, 24 kHz), not JSON
 ```
 
 ```bash
 curl https://openrouter.ai/api/v1/audio/speech \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENROUTER_API_KEY" \
-  --output hello.mp3 \
-  -d '{"model":"google/gemini-3.8-flash-tts","input":"Hello!","voice":"Zephyr","response_format":"mp3"}'
+  --output hello.pcm \
+  -d '{"model":"google/gemini-3.8-flash-tts","input":"Hello!","voice":"Zephyr","response_format":"pcm"}'
+ffmpeg -nostdin -y -loglevel error -f s16le -ar 24000 -ac 1 -i hello.pcm hello.mp3   # raw PCM → a playable file
 ```
 
 ## `google/gemini-3.8-flash-tts` request fields
@@ -60,12 +63,12 @@ curl https://openrouter.ai/api/v1/audio/speech \
 - `model` (required) – `"google/gemini-3.8-flash-tts"`
 - `input` (required) – text to speak
 - `voice` (optional) – one of: Zephyr, Puck, Charon, Kore, Fenrir, Leda, Orus, Aoede, Callirrhoe, Autonoe, Enceladus, Iapetus, Umbriel, Algieba, Despina, Erinome, Algenib, Rasalgethi, Laomedeia, Achernar, Alnilam, Schedar, Gacrux, Pulcherrima, Achird, Zubenelgenubi, Vindemiatrix, Sadachbia, Sadaltager, Sulafat
-- `response_format` (optional) – `mp3` or `pcm`. **API default is `pcm`; this repo's script defaults to `mp3`.**
+- `response_format` (optional) – the API accepts `mp3` and `pcm`, but Gemini models answer with PCM either way. Saving that body under an `.mp3` name gives a file nothing can play.
 - `instructions` (optional) – delivery direction for the whole request, see [Voice style](#voice-style-instructions).
 - `speed`, `input_references`, `provider`, `session_id`, `trace`, `user` – also accepted by OpenRouter's `/audio/speech` ([spec](https://openrouter.ai/docs/api/api-reference/tts/create-speech)). `speed` is honored only by some models; `input_references` is voice cloning/design from a reference clip; `user` and `session_id` are for usage attribution and are not sent to the provider.
 - `input` may also be an array of turns `{text, voice?, instructions?}` for multi-speaker dialogue (Gemini TTS only). Not wired into `tts.py`; call the API directly if needed.
 
-Response: raw audio bytes. `Content-Type` is `audio/mpeg` or `audio/pcm`; `X-Generation-Id` identifies the billed generation.
+Response: raw audio bytes, headerless 16-bit mono PCM at 24 kHz; `X-Generation-Id` identifies the billed generation.
 
 ## Voice style (instructions)
 
@@ -82,7 +85,7 @@ uv run scripts/tts.py --file scene.txt -o out/ad.mp3 \
 client.audio.speech.create(
     model="google/gemini-3.8-flash-tts", voice="Zephyr", input="...",
     instructions="Whisper conspiratorially, like sharing a secret.",
-    response_format="mp3",
+    response_format="pcm",
 )
 ```
 

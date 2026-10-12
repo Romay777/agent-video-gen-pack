@@ -19,6 +19,10 @@ Config (env vars or `.env` in the repo root, see `.env.example`):
     OPENROUTER_TTS_INSTRUCTIONS   optional default delivery instructions
     OPENROUTER_USER         optional end-user/client id sent as `user` for usage attribution
 
+Gemini TTS models on OpenRouter return raw PCM (16-bit mono, 24 kHz) whatever format is
+requested, so the script asks for PCM and encodes it with ffmpeg into the format named by
+the output file's extension (.mp3, .wav, ...). An output ending in .pcm keeps the raw bytes.
+
 `--instructions` is free-form direction for HOW the text is delivered (mood, pace, accent,
 persona). The voice stays the same; the performance changes. Supported by Gemini TTS and
 OpenAI gpt-4o-mini-tts on OpenRouter; other models ignore it.
@@ -38,7 +42,7 @@ from openai import APIConnectionError, APIStatusError, OpenAI
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 HINTS = {
-    400: "Malformed request or an option the routed provider does not support (check --voice / --format).",
+    400: "Malformed request or an option the routed provider does not support (check --voice).",
     401: "Missing or invalid OPENROUTER_API_KEY. Create one at https://openrouter.ai/settings/keys",
     402: "Insufficient OpenRouter credits.",
     403: "Spend limit reached, key disabled, or access blocked.",
@@ -87,8 +91,8 @@ def main() -> int:
     parser.add_argument("-o", "--output", type=Path, required=True, help="Output audio file, e.g. out/voice.mp3")
     parser.add_argument("--voice", default=os.environ.get("OPENROUTER_TTS_VOICE", "Zephyr"))
     parser.add_argument("--model", default=os.environ.get("OPENROUTER_TTS_MODEL", "google/gemini-3.8-flash-tts"))
-    parser.add_argument("--format", choices=["mp3", "pcm"], default="mp3",
-                        help="mp3 (default, use this for Remotion) or raw pcm.")
+    parser.add_argument("--sample-rate", type=int, default=24000,
+                        help="Sample rate of the PCM the model returns (Gemini TTS: 24000).")
     style = parser.add_mutually_exclusive_group()
     style.add_argument("-i", "--instructions", default=os.environ.get("OPENROUTER_TTS_INSTRUCTIONS"),
                        help="Delivery/voice-style instruction, one or more full sentences "
@@ -134,7 +138,15 @@ def main() -> int:
     if extra_body:
         options["extra_body"] = extra_body
 
+    raw_output = args.output.suffix.lower() == ".pcm"
+    if not raw_output and shutil.which("ffmpeg") is None:
+        print("error: ffmpeg is not on PATH; it encodes the PCM the model returns.", file=sys.stderr)
+        return 2
+
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    # Stream into a sibling file and swap the result in on success, so a failed re-take
+    # leaves the previous take at `args.output` untouched.
+    partial = args.output.with_name(args.output.name + ".part")
     generation_id = None
     try:
         # The response body is raw audio bytes, not JSON.
@@ -142,33 +154,48 @@ def main() -> int:
             model=args.model,
             voice=args.voice,
             input=text,
-            response_format=args.format,
+            response_format="pcm",
             **options,
         ) as response:
             generation_id = response.headers.get("X-Generation-Id")
-            response.stream_to_file(args.output)
+            response.stream_to_file(partial)
     except APIStatusError as e:
         hint = HINTS.get(e.status_code, "")
         print(f"error: OpenRouter returned HTTP {e.status_code}: {e.message}\n{hint}", file=sys.stderr)
-        args.output.unlink(missing_ok=True)
+        partial.unlink(missing_ok=True)
         return 1
     except APIConnectionError as e:
         print(f"error: could not reach OpenRouter: {e}", file=sys.stderr)
-        args.output.unlink(missing_ok=True)
+        partial.unlink(missing_ok=True)
         return 1
+    if raw_output:
+        os.replace(partial, args.output)
+    else:
+        # ffmpeg picks the encoder from the extension, so the temporary file keeps it.
+        encoded = args.output.with_name(f"{args.output.stem}.part{args.output.suffix}")
+        result = subprocess.run(
+            ["ffmpeg", "-nostdin", "-y", "-loglevel", "error",
+             "-f", "s16le", "-ar", str(args.sample_rate), "-ac", "1", "-i", str(partial), str(encoded)],
+            capture_output=True, text=True,
+        )
+        partial.unlink(missing_ok=True)
+        if result.returncode != 0:
+            print(f"error: ffmpeg could not encode the audio:\n{result.stderr.strip()}", file=sys.stderr)
+            encoded.unlink(missing_ok=True)
+            return 1
+        os.replace(encoded, args.output)
 
     size_kb = args.output.stat().st_size / 1024
     print(f"wrote {args.output} ({size_kb:.0f} KiB, model={args.model}, voice={args.voice}"
           f"{', styled' if instructions else ''})")
     if generation_id:
         print(f"generation id: {generation_id}")
-    if args.format == "mp3":
-        duration = audio_duration(args.output)
-        if duration is not None:
-            print(f"duration: {duration:.2f}s")
+    if raw_output:
+        duration = args.output.stat().st_size / (2 * args.sample_rate)
     else:
-        print("raw PCM: sample rate is not documented by OpenRouter; convert with ffmpeg "
-              "(e.g. -f s16le -ar 24000 -ac 1 -i in.pcm out.wav) and verify by ear. Prefer --format mp3.")
+        duration = audio_duration(args.output)
+    if duration is not None:
+        print(f"duration: {duration:.2f}s")
     return 0
 
 
