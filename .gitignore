@@ -1,0 +1,10 @@
+.env
+.cache/
+out/
+node_modules/
+*.pcm
+__pycache__/
+.DS_Store
+.venv/
+work/
+.claude/settings.local.json
