@@ -8,3 +8,5 @@ __pycache__/
 .venv/
 work/
 .claude/settings.local.json
+videos/
+*.part

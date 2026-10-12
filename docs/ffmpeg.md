@@ -27,37 +27,50 @@ ffprobe -v error -show_entries format=duration:stream=codec_type,codec_name,widt
 Cut a clip, `-ss` (start) and `-to` (end) in source time, as seconds or `HH:MM:SS.ms`:
 
 ```bash
-ffmpeg -y -loglevel error -ss 75.05 -to 98.6 -i work/talk/source.mp4 \
+ffmpeg -nostdin -y -loglevel error -ss 75.05 -to 98.6 -i talk.mp4 \
   -map 0:v:0 -map "0:a:0?" -vf fps=30 \
   -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -movflags +faststart \
-  my-video/public/clips/clip-01.mp4
+  videos/my-video/public/clips/clip-01.mp4
 ```
 
 Each part is there for a reason:
 
 - `-ss`/`-to` **before** `-i`, with a re-encode: the cut lands on the exact frame.
-- `-vf fps=30`: constant frame rate; use the composition's fps. Add `,scale=-2:1080` to downscale a 4K source.
+- `-vf fps=30`: constant frame rate at the composition's fps, for a clip that goes into Remotion. For a standalone file leave it out and the source frame rate is kept; for a variable-frame-rate source keep it, set to the source's nominal rate. Add `scale=-2:1080` (after a comma, or as the whole `-vf`) to downscale a 4K or Retina source.
 - `libx264` + `yuv420p` + `aac` + `+faststart`: an mp4 that Remotion and browsers play and seek reliably.
 - `-map "0:a:0?"`: first audio track, and no error when the source has none.
+- `-nostdin`: ffmpeg never waits for keyboard input, which would hang an agent's shell.
 
-Then confirm the result: `ffprobe -v error -show_entries format=duration -of csv=p=0 my-video/public/clips/clip-01.mp4` should print `end − start`.
+Then confirm the result: `ffprobe -v error -show_entries format=duration -of csv=p=0 videos/my-video/public/clips/clip-01.mp4` should print `end − start`.
 
 Find pauses, as candidate cut points or dead air to remove:
 
 ```bash
-ffmpeg -hide_banner -i source.mp4 -af silencedetect=noise=-35dB:d=0.6 -f null - 2>&1 | grep silence_
+ffmpeg -nostdin -hide_banner -i source.mp4 -vn -af silencedetect=noise=-35dB:d=0.6 -f null - 2>&1 | grep silence_
 ```
 
 Grab a frame to see what is on screen at a moment (read the PNG to check framing, faces, on-screen text):
 
 ```bash
-ffmpeg -y -loglevel error -ss 80 -i source.mp4 -frames:v 1 work/talk/at-80s.png
+ffmpeg -nostdin -y -loglevel error -ss 80 -i source.mp4 -frames:v 1 work/talk/at-80s.png
 ```
 
-Even out loudness of a quiet recording:
+See a whole video at a glance, for footage without speech: a contact sheet with one frame every 5 s, twelve per image (change `fps=1/5` and `tile=4x3` to the length; frame *n* of the sheet is at *n* × 5 s):
 
 ```bash
-ffmpeg -i clip.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:a aac clip-loud.mp4
+ffmpeg -nostdin -y -loglevel error -i source.mp4 -vf "fps=1/5,scale=320:-2,tile=4x3" -frames:v 1 -update 1 work/demo/sheet.png
+```
+
+List the times where the picture changes sharply (cuts, screen changes); raise or lower `0.3` for fewer or more:
+
+```bash
+ffmpeg -nostdin -hide_banner -i source.mp4 -an -vf "select='gt(scene,0.3)',showinfo" -f null - 2>&1 | grep -o "pts_time:[0-9.]*"
+```
+
+Even out loudness of a quiet recording (`-ar 48000` matters: `loudnorm` upsamples internally):
+
+```bash
+ffmpeg -nostdin -y -loglevel error -i clip.mp4 -c:v copy -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k clip-loud.mp4
 ```
 
 ## Gotchas

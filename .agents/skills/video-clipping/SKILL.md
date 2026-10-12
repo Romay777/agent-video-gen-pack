@@ -8,9 +8,10 @@ description: Cut clips out of an existing video (talk, podcast, stream, screen r
 Needs `ffmpeg` and `ffprobe` on PATH: check with `ffmpeg -version`; if missing, ask the person to install it. The commands are in `AGENTS.md` → "Cutting existing footage" and "Timings". What follows is what tends to matter; take the parts your task needs.
 
 - **A plain cut is ffmpeg alone.** Remotion comes in when something is drawn over the footage or clips are assembled into one video.
-- **Probe the source first** (duration, resolution, frame rate, audio present); keep it unmodified in `work/<video>/`.
+- **Probe the source first** (duration, resolution, frame rate, audio present). Read it in place or symlink it into `work/<name>/`; leave it unmodified.
 - **Choosing moments by what is said**: transcribe the whole source once (in the background when it is long) and read its `sentences`. With timecodes from the person this is unnecessary.
-- **Boundaries that follow speech** sit on word starts: `start` = first word's start − 0.15 s; `end` = start of the next sentence's first word. A word's `end` is derived, so it is a poor cut point.
+- **Choosing moments by what is shown** (no speech, screen recordings): a contact sheet and scene-change times, recipes in `docs/ffmpeg.md`.
+- **Boundaries that follow speech** sit on word starts: `start` = first word's start − 0.15 s; `end` = the earlier of the next sentence's first word and the last word's `end` + 0.3 s. A word's `end` is derived, so cutting exactly on it clips the word.
 - **Verifying a speech cut**: transcribe the clip; its `text` should open and close on the intended words. Re-cutting means re-transcribing, since timings are relative to the clip file.
 - **In Remotion**, a clip's `<Video>` and whatever is synced to it (captions, titles, effects) share one `<Series.Sequence>`; each output video is its own composition.
 

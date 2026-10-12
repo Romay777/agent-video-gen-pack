@@ -6,7 +6,7 @@
 
 ```bash
 uv run scripts/download_model.py                       # optional pre-download (~2.4 GB + 2 MB VAD) into .cache/models/
-uv run scripts/transcribe.py my-video/public/voiceover/scene-01.mp3
+uv run scripts/transcribe.py videos/my-video/public/voiceover/scene-01.mp3
 uv run scripts/transcribe.py in.mp3 -o work/in.json --vad always
 uv run scripts/transcribe.py in.mp3 --quantization int8   # smaller/faster; run download_model.py --quantization int8 first
 ```
@@ -39,7 +39,7 @@ Speed on an Apple-silicon CPU: ~45 s of audio in ~5 s after the models are cache
 
 ## Accuracy and limits — read before relying on `end`
 
-- The model reports only each token's **start**, on a **0.08 s** grid. `end` is derived: next token's start, capped at 0.4 s so a word before a pause doesn't stretch across the silence. The final word ends at the audio end.
+- The model reports only each token's **start**, on a **0.08 s** grid. `end` is derived: next token's start, capped at 0.4 s so a word before a pause doesn't stretch across the silence. The final word is capped the same way.
 - Absolute times were checked against a clip with known silence gaps and were within ~0.02 s (plus the 0.08 s quantization).
 - The recognized text is a transcription, not your script: punctuation and capitalization come from the model, numbers may be spelled differently ("20" vs "twenty"). To show the script text with the audio timing, align by word order or use the recognized text as-is.
 - ~20–30 s is the per-pass limit. Audio longer than 20 s automatically goes through Silero VAD, which splits on pauses and transcribes each speech segment. A voice-over with **no** pauses over ~30 s may produce an overly long VAD segment; prefer per-scene audio files.

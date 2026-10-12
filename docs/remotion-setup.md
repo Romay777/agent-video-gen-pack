@@ -6,22 +6,24 @@ Remotion renders React components to video. You write a composition (a React com
 
 ## Prerequisites
 
-- Node.js (current LTS) and npm. Check with `node -v`.
+- Node.js 18+ and npm. Check with `node -v`.
 - `ffmpeg` is not needed by Remotion itself but is used by this repo's scripts.
 
 ## Create a project
 
-This repo already has files, so scaffold into a subfolder (the skill's `remotion-create` part says the same):
+Projects live in `videos/<name>/`, one per video; `videos/` is git-ignored, so they stay out of this repository. `create-video` refuses a folder that already has files, so scaffold before generating media into the project:
 
 ```bash
-npx create-video@latest --yes --blank --no-tailwind my-video
-cd my-video
-npm i
+mkdir -p videos && (cd videos && npx create-video@latest --yes --blank --no-tailwind my-video)
 ```
+
+It installs the dependencies itself. Next to the code, keep a `NOTES.md` in the project (see `AGENTS.md` → "Where things live and run").
 
 Plain `npx create-video@latest` (no flags) starts the interactive wizard; it can also offer to install the agent skills. Use `--help` to see other templates.
 
 ## Studio and render
+
+Run these inside the project folder:
 
 ```bash
 npx remotion studio              # live preview in the browser (add --no-open to skip opening it)

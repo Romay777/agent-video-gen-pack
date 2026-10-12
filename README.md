@@ -15,7 +15,7 @@ What is inside:
 
 ## Setup
 
-Requirements: [`uv`](https://docs.astral.sh/uv/), Node.js, and **`ffmpeg`** (required by both workflows; install: [docs/ffmpeg.md](docs/ffmpeg.md)).
+Requirements: [`uv`](https://docs.astral.sh/uv/), Node.js 18+, and **`ffmpeg`** (required by both workflows; install: [docs/ffmpeg.md](docs/ffmpeg.md)).
 
 ```bash
 brew install ffmpeg                  # macOS; Linux: sudo apt install ffmpeg; Windows: winget install Gyan.FFmpeg
@@ -29,7 +29,7 @@ Open this folder in your agent (Claude Code, Codex, Cursor, …) and ask, for ex
 
 > Make a 45-second explainer video about how bees make honey. Calm female voice, 1080×1920, subtitles.
 
-The agent will write the script, synthesize the voice-over, transcribe it for timings, build the Remotion project in a subfolder, and open Studio for you to preview.
+The agent will write the script, create a Remotion project in `videos/`, synthesize the voice-over, transcribe it for timings, build the composition, and open Studio for you to preview.
 
 > Here is `~/Downloads/podcast.mp4`. Cut the three best moments into vertical shorts with subtitles and a title.
 
@@ -54,7 +54,8 @@ scripts/                      tts.py, transcribe.py, download_model.py, asr_mode
 .agents/skills/               remotion-best-practices (third-party) + voiceover-tts, speech-timestamps, video-clipping (ours)
 skills-lock.json              pinned source of the installed Remotion skill
 .cache/models/                downloaded ASR models (git-ignored)
-work/                         scene texts, source footage, intermediate files (git-ignored)
+videos/<name>/                one Remotion project per video, with its NOTES.md (git-ignored)
+work/                         scene texts, picks, intermediate files (git-ignored)
 ```
 
 ## Update the Remotion skill

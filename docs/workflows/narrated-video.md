@@ -10,18 +10,18 @@ brief → script (scenes) → TTS per scene → timings per scene → Remotion c
 
 ## Writing the script
 
-- Clarify only what you can't infer: topic, audience, length, language, aspect ratio (default 1920×1080; 1080×1920 for Shorts/Reels/TikTok), tone. Otherwise pick sensible defaults and state them.
+- Clarify only what you can't infer: topic, audience, length, language, aspect ratio, tone. Otherwise pick sensible defaults and state them.
 - Narration is **spoken**: short sentences, no parentheses, no symbols the voice can't read. Spell out numbers, units and acronyms the way they should be pronounced.
-- Pace: ~150 spoken words per minute. 30 s ≈ 75 words; 60 s ≈ 150 words. Each scene also adds 0.6 s of pause. After generating, add up the real `duration` values and trim or extend the text to hit the requested length.
-- This example splits the narration into scenes, one idea each. It names scenes `scene-01`, `scene-02`, … and keeps the narration in `work/<video>/scene-NN.txt` so a line can be re-taken without touching the others.
+- Pace: ~150 spoken words per minute. 30 s ≈ 75 words; 60 s ≈ 150 words. This example also leaves 0.6 s of pause after each scene. After generating, add up the real `duration` values and trim or extend the text to hit the requested length.
+- This example splits the narration into scenes, one idea each. It names scenes `scene-01`, `scene-02`, … and keeps the narration in `work/<name>/scene-NN.txt` so a line can be re-taken without touching the others.
 - Show the script to the person before spending credits when the video is long (more than ~2 minutes) or the brief was vague. For short videos just proceed.
 
 ## Generating audio and timings
 
-Create the Remotion project first ([../remotion-setup.md](../remotion-setup.md)): the audio goes into its `public/`, and `create-video` should be the one to create that folder.
+Create the Remotion project first ([../remotion-setup.md](../remotion-setup.md)): the audio goes into its `public/`, and `create-video` refuses a folder that already has files. Write the voice and the `-i` instruction into the project's `NOTES.md` so a later re-take can match them.
 
 ```bash
-V=my-video/public/voiceover          # inside the Remotion project
+V=videos/my-video/public/voiceover   # run from the repo root
 for f in work/demo/scene-*.txt; do
   id=$(basename "$f" .txt)
   uv run scripts/tts.py --file "$f" -o "$V/$id.mp3"
@@ -29,7 +29,7 @@ for f in work/demo/scene-*.txt; do
 done
 ```
 
-Then read each JSON: `text` vs the script (mispronunciation shows up as a different word and low `confidence`), `duration`, and `words`. If a take is bad, change the wording (or `--voice`) and redo only that scene.
+The example transcribes every scene even though subtitles are optional: `Narrated.tsx` sizes scenes from the JSON `duration`, and comparing `text` with the script is the only check of what the voice actually said (mispronunciation shows up as a different word and low `confidence`). If a take is bad, change the wording (or `--voice`) and redo only that scene.
 
 ## Building the composition
 
@@ -53,7 +53,7 @@ Per the skill's captions guide, when the person wants to edit captions in Studio
 ## Preview, then render
 
 ```bash
-cd my-video && npx remotion studio            # let the person look first
+cd videos/my-video && npx remotion studio     # let the person look first
 npx remotion render Narrated out/narrated.mp4 # only when asked
 ```
 

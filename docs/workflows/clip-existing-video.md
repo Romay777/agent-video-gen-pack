@@ -1,6 +1,6 @@
 # Workflow: clips from an existing video (cut → timings → overlays in Remotion)
 
-From "here is a recording, cut it" (shorts, highlights, an ad, a trimmed version) to clips with subtitles and effects on top. The speech is already in the footage, so there is no script and no TTS.
+From "here is a recording, cut it" (shorts, highlights, a trimmed version) to clips with subtitles and effects on top. This example assumes the footage has speech: moments are chosen by what is said and there is no TTS. For footage without speech, moments are chosen by eye (contact sheet and scene changes in [../ffmpeg.md](../ffmpeg.md#recipes)) and steps 2 and the per-clip transcription fall away.
 
 > This is one worked example of a route through the toolkit. Your task may need fewer steps, other steps or a different order: subtitles, titles and effects in particular are there only if the video calls for them.
 
@@ -13,7 +13,7 @@ ffmpeg does the cutting and measuring; Remotion draws everything that goes on to
 ## 1. Take in the source
 
 - Check `ffmpeg -version && ffprobe -version` first; without them stop and ask the person to install ffmpeg.
-- The person supplies the file. Copy or symlink it to `work/<video>/source.<ext>` (`work/` is git-ignored) and leave it unmodified.
+- The person supplies the file. Read it where it is, or symlink it to `work/<name>/source.<ext>` when several steps will use it (`work/` is git-ignored). Leave it unmodified.
 - Probe it (command in [../ffmpeg.md](../ffmpeg.md#recipes)) and note duration, resolution, frame rate, and that an audio stream exists. Resolution and orientation decide the framing in step 5.
 
 ## 2. Transcribe the whole source
@@ -34,16 +34,16 @@ What makes a good moment depends on the video. For speech that must stand on its
 Boundaries that follow speech come from **measured word starts**:
 
 - `start` = start of the first word − 0.15 s.
-- `end` = start of the first word of the *next* sentence. A word's own `end` is derived and capped at 0.4 s, so cutting on it clips the tail of a drawn-out word. When nothing follows, use the last word's `end` + 0.3 s.
+- `end` = the earlier of two points: the start of the first word of the *next* sentence, and the last word's `end` + 0.3 s. A word's own `end` is derived and capped at 0.4 s, so cutting exactly on it clips the tail of a drawn-out word; the next sentence's start alone would keep a long pause or the other speaker's reply.
 
-This example records the picks in `work/<video>/clips.json` as `[{ "id": "clip-01", "start": 75.05, "end": 98.6, "why": "…" }]`: a list that is easy to show the person and to re-cut from.
+This example records the picks in `work/<name>/clips.json` as `[{ "id": "clip-01", "start": 75.05, "end": 98.6, "why": "…" }]`: a list that is easy to show the person and to re-cut from.
 
 ## 4. Cut, then time each clip
 
 Create the Remotion project first ([../remotion-setup.md](../remotion-setup.md)) so clips land in its `public/clips/`. Cut each pick with the command from [../ffmpeg.md](../ffmpeg.md#recipes) (it always re-encodes, at the composition's fps). For subtitles or word-synced effects, transcribe the result:
 
 ```bash
-uv run scripts/transcribe.py my-video/public/clips/clip-01.mp4 -o my-video/public/clips/clip-01.json
+uv run scripts/transcribe.py videos/my-video/public/clips/clip-01.mp4 -o videos/my-video/public/clips/clip-01.json
 ```
 
 Transcribing the cut file gives timings relative to that clip's own start, which is what Remotion needs. It also verifies a speech cut: the JSON `text` should start and end on the intended words, with the first word starting within ~0.3 s; otherwise move the boundary and cut again.
@@ -60,7 +60,7 @@ Follow the `remotion-best-practices` skill; its `remotion-markup/video-editing.m
 2. **Length comes from the clip**: `durationInFrames = Math.floor(duration * fps)` from the clip's JSON, written as a number on the sequence; the composition's length is the sum. Flooring keeps the last frame inside the file.
    **Several output videos are several compositions**, one per video, each rendered to its own file; clips go back to back in one composition when they form a single video.
 3. **The clip's own audio** plays through `<Video>`. `volume` lowers it (under music, say) and `muted` silences it (for a new voice-over).
-4. **Captions**, if the video has them: paste the clip JSON's `captions` array inline into `<BasicCaptions captions={[...]}>`; inline is what lets the person edit them in Studio.
+4. **Captions**, if the video has them: the clip JSON's `captions` array goes to a captions element (`basic-captions`, `word-highlight-captions` and others, listed in `AGENTS.md` → Composition). The example pastes it inline, which lets the person edit captions in Studio; an inline copy has to be pasted again after a re-cut.
 5. **Framing** a horizontal source in a vertical composition, two ways: `objectFit="cover"` crops the sides (a still shows what is lost), or the full frame sits over a blurred, muted copy of itself (what the example does).
 6. **Sync effects to words** with `Math.round(word.start * fps)`, exactly as in the narrated workflow.
 
@@ -68,9 +68,11 @@ Overlays and where the technique is documented (files in `.agents/skills/remotio
 
 | Overlay | How |
 | --- | --- |
-| Subtitles | `<BasicCaptions>`; `../remotion-captions/display-captions.md` |
-| Title, lower third, keyword pop-ups | `<Sequence from={wordFrame}>` with `spring()`; `text-highlights.md` |
-| Punch-in zoom on a key phrase | `scale` on the `<Video>` wrapper driven by `interpolate()`; `cropping.md` |
+| Subtitles | A captions element from https://www.remotion.dev/elements/captions; `../remotion-captions/display-captions.md` |
+| Title, lower third, keyword pop-ups | `<Sequence from={wordFrame}>` with an animated component; the lower-third example in `REFERENCE.md` ("Example scene") |
+| Marker highlight, circle, underline on text | `text-highlights.md` |
+| Punch-in zoom on a key phrase | `scale` on the `<Video>` wrapper driven by `interpolate()`; `timing.md` |
+| Cropping to a region of the frame | `cropping.md` |
 | Progress bar | width from `frame / durationInFrames` |
 | Transitions between clips | `<TransitionSeries>`; `transitions.md` |
 | Color, blur, grain, light leaks | `effects.md`, `light-leaks.md` |
