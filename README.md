@@ -49,7 +49,6 @@ The agent will transcribe the recording, propose the moments, cut them with ffmp
 AGENTS.md  CLAUDE.md          instructions for agents
 docs/workflows/               worked example routes: narrated-video.md, clip-existing-video.md
 docs/                         OpenRouter TTS, timings, ffmpeg, Remotion setup (+ examples/)
-                              client-billing-research.md  (owner notes: per-client spend tracking)
 scripts/                      tts.py, transcribe.py, download_model.py, asr_models.py
 .agents/skills/               remotion-best-practices (third-party) + voiceover-tts, speech-timestamps, video-clipping (ours)
 skills-lock.json              pinned source of the installed Remotion skill

@@ -17,7 +17,7 @@ Config (env vars or `.env` in the repo root, see `.env.example`):
     OPENROUTER_TTS_MODEL    default google/gemini-3.8-flash-tts
     OPENROUTER_TTS_VOICE    default Zephyr
     OPENROUTER_TTS_INSTRUCTIONS   optional default delivery instructions
-    OPENROUTER_USER         optional end-user/client id sent as `user` for usage attribution
+    OPENROUTER_USER         optional id sent with each request as OpenRouter `user`
 
 Gemini TTS models on OpenRouter return raw PCM (16-bit mono, 24 kHz) whatever format is
 requested, so the script asks for PCM and encodes it with ffmpeg into the format named by
@@ -99,7 +99,7 @@ def main() -> int:
                             "(e.g. 'Sad and quiet, as if telling a secret.').")
     style.add_argument("--instructions-file", type=Path, help="Read the instructions from this file (UTF-8).")
     parser.add_argument("--user", default=os.environ.get("OPENROUTER_USER"),
-                        help="Client/end-user id, sent as OpenRouter `user` so usage can be attributed.")
+                        help="Optional id sent with the request as OpenRouter `user`.")
     parser.add_argument("--session-id", help="Optional OpenRouter session id to group related requests.")
     args = parser.parse_args()
 
